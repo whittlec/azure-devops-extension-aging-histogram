@@ -27,6 +27,7 @@
     var $type = $('#type');
     var $query = $('#query');
     var $percentiles = $('#percentiles');
+    var $units = $('#units');
 
     var addQueryToSelect = (query, level) => {
         level = level ?? 0;
@@ -69,7 +70,8 @@
             title: settings?.title ?? 'Aging',
             type: settings?.type ?? '0',
             query: settings?.query ?? '',
-            percentiles: settings?.percentiles ?? ''
+            percentiles: settings?.percentiles ?? '',
+            units: settings?.units ?? 'days'
         };
     };
 
@@ -85,7 +87,8 @@
                 title: $title.val(),
                 type: $type.val(),
                 query: $query.val(),
-                percentiles: percentiles
+                percentiles: percentiles,
+                units: $units.val()
             })
         };
     };
@@ -104,11 +107,13 @@
             $type.val(settings.type);
             $query.val(settings.query);
             $percentiles.val(settings.percentiles);
+            $units.val(settings.units);
 
             $title.on('change', changeSettings);
             $type.on('change', changeSettings);
             $query.on('change', changeSettings);
             $percentiles.on('change', changeSettings);
+            $units.on('change', changeSettings);
 
             deferred.resolve();
         });
