@@ -10,7 +10,7 @@
 
             getData(settings).then(data => {
                 if (data.length > 0) {
-                    prepareChart(data, settings.percentiles);
+                    prepareChart(data, settings.percentiles, settings.units);
                 }
             });
 
@@ -19,8 +19,27 @@
     };
 
     /* PRIVATE */
+    var convertAgeUnits = (age, units) => {
+        var days = age / (1000 * 3600 * 24);
 
-    var getBoardColumnAges = (query) => {
+        switch (units)
+        {
+            case 'years':
+                return days / 365;
+            case 'quarters':
+                return days / (365 / 4); 
+            case 'months':
+                return days / (365 / 12);
+            case 'weeks':
+                return days / 7;
+            case 'days':
+                return days;
+            default:
+                return days;
+        }
+    };
+
+    var getBoardColumnAges = (query, units) => {
         var deferred = $.Deferred();
 
         query.wiql = `select [System.Id], [System.BoardColumn], [System.ChangedDate] ${query.wiql.substring(query.wiql.toUpperCase().indexOf('FROM'))}`;
@@ -49,7 +68,7 @@
                         var endDate = new Date();
                         var startDate = new Date(item.revisions[index - 1].fields['System.ChangedDate']);
         
-                        ages.push(Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)));
+                        ages.push(Math.floor(convertAgeUnits((endDate.getTime() - startDate.getTime()), units)));
                     }
 
                     if (item.children !== undefined) {
@@ -67,7 +86,7 @@
                                 var endDate = new Date();
                                 var startDate = new Date(child.revisions[index - 1].fields['System.ChangedDate']);
                 
-                                ages.push(Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)));        
+                                ages.push(Math.floor(convertAgeUnits((endDate.getTime() - startDate.getTime()), units)));
                             }
                         });
                     }
@@ -80,7 +99,9 @@
         return deferred.promise();
     };
 
-    var getChartConfiguration = (data, percentiles) => {
+    var getChartConfiguration = (data, percentiles, units) => {
+        var unitsLabel = units.charAt(0).toUpperCase() + units.slice(1);
+
         var config = {
             type: 'BarPercentile',
             data: {
@@ -99,7 +120,7 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 aspectRatio: 3,
-                scales: { y: { title: { text: 'Items', display: 'true' } }, x: { title: { text: 'Days', display: 'true' } } },
+                scales: { y: { title: { text: 'Items', display: 'true' } }, x: { title: { text: unitsLabel, display: 'true' } } },
                 plugins: {
                     title:  { display: false },
                     legend: { display: false },
@@ -118,13 +139,13 @@
             var ages;
             
             if (settings.type == '0') {
-                ages = getOverallAges(query);
+                ages = getOverallAges(query, settings.units);
                 
             } else if (settings.type == '1') {
-                ages = getStateAges(query);
+                ages = getStateAges(query, settings.units);
                 
             } else {
-                ages = getBoardColumnAges(query);
+                ages = getBoardColumnAges(query, settings.units);
             }
 
             ages.then(data => {
@@ -144,7 +165,7 @@
         return deferred.promise();
     };
 
-    var getOverallAges = (query) => {
+    var getOverallAges = (query, units) => {
         var deferred = $.Deferred();
 
         query.wiql = `select [System.Id], [System.CreatedDate], [Microsoft.VSTS.Common.ClosedDate] ${query.wiql.substring(query.wiql.toUpperCase().indexOf('FROM'))}`;
@@ -156,14 +177,14 @@
                 var endDate = item['Microsoft.VSTS.Common.ClosedDate'] !== undefined && item['Microsoft.VSTS.Common.ClosedDate'] !== null && item['Microsoft.VSTS.Common.ClosedDate'] !== '' ? new Date(item['Microsoft.VSTS.Common.ClosedDate']) : new Date();
                 var startDate = new Date(item['System.CreatedDate']);
 
-                ages.push(Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)));
+                ages.push(Math.floor(convertAgeUnits((endDate.getTime() - startDate.getTime()), units)));
 
                 if (item.children !== undefined) {
                     item.children.forEach(child => {
                         var endDate = child['Microsoft.VSTS.Common.ClosedDate'] !== undefined && child['Microsoft.VSTS.Common.ClosedDate'] !== null && child['Microsoft.VSTS.Common.ClosedDate'] !== '' ? new Date(child['Microsoft.VSTS.Common.ClosedDate']) : new Date();
                         var startDate = new Date(child['System.CreatedDate']);
-        
-                        ages.push(Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)));
+
+                        ages.push(Math.floor(convertAgeUnits((endDate.getTime() - startDate.getTime()), units)));
                     });
                 }
             });
@@ -185,7 +206,7 @@
         };
     };
 
-    var getStateAges = (query) => {
+    var getStateAges = (query, units) => {
         var deferred = $.Deferred();
 
         query.wiql = `select [System.Id], [Microsoft.VSTS.Common.StateChangeDate] ${query.wiql.substring(query.wiql.toUpperCase().indexOf('FROM'))}`;
@@ -197,14 +218,14 @@
                 var endDate = new Date();
                 var startDate = new Date(item['Microsoft.VSTS.Common.StateChangeDate']);
 
-                ages.push(Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)));
+                ages.push(Math.floor(convertAgeUnits((endDate.getTime() - startDate.getTime()), units)));
 
                 if (item.children !== undefined) {
                     item.children.forEach(child => {
                         var endDate = new Date();
                         var startDate = new Date(child['Microsoft.VSTS.Common.StateChangeDate']);
         
-                        ages.push(Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)));
+                        ages.push(Math.floor(convertAgeUnits((endDate.getTime() - startDate.getTime()), units)));
                     });
                 }
             });
@@ -215,7 +236,7 @@
         return deferred.promise();
     };
 
-    var prepareChart = (data, percentiles) => {
+    var prepareChart = (data, percentiles, units) => {
         $('#chart').show();
         $('#message').hide();
 
@@ -227,6 +248,6 @@
         }
 
         var chartArea = document.getElementById('chart');
-        var chart = new Chart(chartArea, getChartConfiguration(data, percentiles));
+        var chart = new Chart(chartArea, getChartConfiguration(data, percentiles, units));
     }; 
 })();
